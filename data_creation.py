@@ -53,14 +53,14 @@ def three_body_equations(t, y):
 
 # Initial position and velocities as a 12-D vector
 y0 = np.array([
-    -1.0, 0.0, 0.1, 0.1,   # The x, y, vx and vy of the first body
-    1.0, 0.0, 0.0, -0.1,   # The x, y, vx and vy of the second body
-    0.0, 1.0, -0.1, 0.0    # The x, y, vx and vy of the third body
+    -1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the first body
+    1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the second body
+    0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
 ])
 # I took these randomly but these initial conditions resulted in a nice plot.
 
-eval_time = 10
-steps = 10000
+eval_time = 1000
+steps = 1000000
 t_span = (0, eval_time)
 t_eval = np.linspace(0, eval_time, steps)
 
@@ -93,3 +93,25 @@ plt.grid(True)
 plt.axis("equal")
 plt.show()
 
+def get_trajectories():
+    sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
+
+    # time points
+    t = sol.t  # shape (steps,)
+
+    # reshape into (n_bodies, 4, n_times)
+    n_bodies = 3
+    state = sol.y.reshape(n_bodies, 4, -1)
+
+    # positions and velocities
+    x = state[:, 0, :]  # shape (3, steps)
+    y = state[:, 1, :]  # shape (3, steps)
+    vx = state[:, 2, :] # shape (3, steps)
+    vy = state[:, 3, :] # shape (3, steps)
+
+    # Plotting to see whether our initial conditions result in chaotic behaviour
+    x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
+    x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
+    x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
+    print(type(sol))
+    return (x1, y1), (x2, y2), (x3, y3)
