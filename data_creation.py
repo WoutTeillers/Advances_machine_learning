@@ -3,7 +3,8 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
 
-
+G = 1.0  # Gravitational constant
+masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
 
 def three_body_equations(t, y):
     """
@@ -51,18 +52,17 @@ def three_body_equations(t, y):
 
 
 def get_trajectories():
-    G = 1.0  # Gravitational constant
-    masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
+
     # Initial position and velocities as a 12-D vector
     y0 = np.array([
         -1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the first body
         1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the second body
         0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
     ])
-    # I took these randomly but these initial conditions resulted in a nice plot.
 
-    eval_time = 10
-    steps = 10000
+    # Time span for the simulation
+    eval_time = 10000
+    steps = 1000 * eval_time
     t_span = (0, eval_time)
     t_eval = np.linspace(0, eval_time, steps)
 
@@ -87,11 +87,6 @@ def get_trajectories():
     y = state[:, 1, :]  # shape (3, steps)
     vx = state[:, 2, :] # shape (3, steps)
     vy = state[:, 3, :] # shape (3, steps)
-
-    # # Plotting to see whether our initial conditions result in chaotic behaviour
-    # x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
-    # x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
-    # x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
 
     plt.figure(figsize=(6, 6))
     for i in range(n_bodies):
