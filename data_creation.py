@@ -3,8 +3,7 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
 
-G = 1.0  # Gravitational constant
-masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
+
 
 def three_body_equations(t, y):
     """
@@ -51,49 +50,29 @@ def three_body_equations(t, y):
     return dydt
 
 
-# Initial position and velocities as a 12-D vector
-y0 = np.array([
-    -1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the first body
-    1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the second body
-    0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
-])
-# I took these randomly but these initial conditions resulted in a nice plot.
-
-eval_time = 1000
-steps = 1000000
-t_span = (0, eval_time)
-t_eval = np.linspace(0, eval_time, steps)
-
-# Solve
-sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
-
-
-
-
-# Plotting to see whether our initial conditions result in chaotic behaviour
-x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
-x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
-x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
-
-plt.figure(figsize=(8, 8))
-plt.plot(x1, y1, label="Body 1", color="red")
-plt.plot(x2, y2, label="Body 2", color="blue")
-plt.plot(x3, y3, label="Body 3", color="green")
-
-# End points
-plt.scatter([x1[-1], x2[-1], x3[-1]],
-            [y1[-1], y2[-1], y3[-1]],
-            color=["red", "blue", "green"], s=100, marker="o")
-
-plt.xlabel("x")
-plt.ylabel("y")
-plt.title("Three-Body Trajectories")
-plt.legend()
-plt.grid(True)
-plt.axis("equal")
-plt.show()
-
 def get_trajectories():
+    G = 1.0  # Gravitational constant
+    masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
+    # Initial position and velocities as a 12-D vector
+    y0 = np.array([
+        -1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the first body
+        1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the second body
+        0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
+    ])
+    # I took these randomly but these initial conditions resulted in a nice plot.
+
+    eval_time = 10
+    steps = 10000
+    t_span = (0, eval_time)
+    t_eval = np.linspace(0, eval_time, steps)
+
+    # Solve
+    sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
+
+    # Plotting to see whether our initial conditions result in chaotic behaviour
+    x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
+    x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
+    x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
     sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
 
     # time points
@@ -109,9 +88,20 @@ def get_trajectories():
     vx = state[:, 2, :] # shape (3, steps)
     vy = state[:, 3, :] # shape (3, steps)
 
-    # Plotting to see whether our initial conditions result in chaotic behaviour
-    x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
-    x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
-    x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
+    # # Plotting to see whether our initial conditions result in chaotic behaviour
+    # x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
+    # x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
+    # x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
+
+    plt.figure(figsize=(6, 6))
+    for i in range(n_bodies):
+        plt.plot(x[i], y[i], label=f"Body {i+1}")
+
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Three-body trajectories")
+    plt.axis("equal")
+    plt.legend()
+    plt.show()
     print(type(sol))
-    return (x1, y1), (x2, y2), (x3, y3)
+    return x,y,vx,vy,t
