@@ -60,19 +60,19 @@ def get_trajectories():
         0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
     ])
 
+    y0 = np.array([
+        -1.0, 0.0, 0.1, 0.1 ,   # The x, y, vx and vy of the first body
+        1.0, 0.0, 0.0, -0.1,   # The x, y, vx and vy of the second body
+        0.0, 1.0, -0.1, 0.0    # The x, y, vx and vy of the third body
+    ])
+
     # Time span for the simulation
-    eval_time = 10000
+    eval_time = 10
     steps = 1000 * eval_time
     t_span = (0, eval_time)
     t_eval = np.linspace(0, eval_time, steps)
 
     # Solve
-    sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
-
-    # Plotting to see whether our initial conditions result in chaotic behaviour
-    x1, y1 = sol.y[0], sol.y[1]    # The position of body 1
-    x2, y2 = sol.y[4], sol.y[5]    # The position of body 2
-    x3, y3 = sol.y[8], sol.y[9]    # The position of body 3
     sol = solve_ivp(three_body_equations, t_span, y0, method='RK45', t_eval=t_eval)
 
     # time points
