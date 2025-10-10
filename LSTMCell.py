@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from data_creation import get_trajectories
 import numpy as np
+
 # code taken from: https://medium.com/@wangdk93/lstm-from-scratch-c8b4baf06a8b
 
 class LSTMCell(nn.Module):
@@ -76,6 +76,58 @@ class LSTM(nn.Module):
         return out
 
 
+    def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=32, n_splits=5):
+        from sklearn.model_selection import TimeSeriesSplit
+        import torch
+
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        fold_train_losses = []
+        fold_val_losses = []
+
+        for fold, (train_index, test_index) in enumerate(tscv.split(trainX)):
+            print(f"Fold {fold + 1}")
+            X_train, X_test = trainX[train_index], trainX[test_index]
+            y_train, y_test = trainY[train_index], trainY[test_index]
+
+            X_train = torch.tensor(X_train, dtype=torch.float32)
+            y_train = torch.tensor(y_train, dtype=torch.float32)
+
+            fold_epoch_train = []
+            fold_epoch_val = []
+
+            for epoch in range(num_epochs):
+                self.train()
+                epoch_loss = 0.0
+
+                # Mini-batches
+                for i in range(0, len(X_train), batch_size):
+                    batch_X = X_train[i:i+batch_size]
+                    batch_Y = y_train[i:i+batch_size]
+
+                    optimizer.zero_grad()
+                    outputs = self.forward(batch_X)
+                    loss = criterion(outputs, batch_Y)
+                    loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += loss.item() * len(batch_X)
+
+                epoch_loss /= len(X_train)
+                fold_epoch_train.append(epoch_loss)
+
+                # Validation loss
+                with torch.no_grad():
+                    X_val = torch.tensor(X_test, dtype=torch.float32)
+                    y_val = torch.tensor(y_test, dtype=torch.float32)
+                    val_outputs = self.forward(X_val)
+                    val_loss = criterion(val_outputs, y_val).item()
+                fold_epoch_val.append(val_loss)
+
+            fold_train_losses.append(fold_epoch_train)
+            fold_val_losses.append(fold_epoch_val)
+
+        return fold_train_losses, fold_val_losses
+
     def training_loop(self, num_epochs = 100, optimizer = None, criterion = None, trainX = None, trainY = None):
 
         for epoch in range(num_epochs):
@@ -92,6 +144,39 @@ class LSTM(nn.Module):
                 optimizer.step()
 
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+    
+    def generate_timeseries(model, start_input, steps):
+        """
+        Efficiently generate a time series using a single-step model.
+        
+        Args:
+            model: PyTorch model that takes a single input and outputs a single next value.
+            start_input: np.ndarray or torch.Tensor of shape (input_size,)
+            steps: int, number of future steps to generate
+
+        Returns:
+            np.ndarray of shape (steps, input_size) containing generated values
+        """
+        model.eval()
+
+        # Convert to tensor if needed and add batch dimension
+        if isinstance(start_input, np.ndarray):
+            input_t = torch.from_numpy(start_input).float().unsqueeze(0)
+        else:
+            input_t = start_input.float().unsqueeze(0)
+
+        # Pre-allocate array for generated sequence
+        generated = torch.empty((steps, 12), dtype=torch.float32)
+        generated[0] = input_t
+
+        with torch.no_grad():
+            for i in range(1, steps-1):
+                output = model.forward(input_t)
+                generated[i] = output  # store output
+                input_t = output.unsqueeze(0)  # use as next input
+
+        return generated.numpy()
 
 if __name__ == "__main__":
     # Example usage

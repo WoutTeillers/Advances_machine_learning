@@ -100,3 +100,48 @@ def get_trajectories():
     plt.show()
     print(type(sol))
     return x,y,vx,vy,t
+
+def plot_trajectories(x, x_pred, num_bodies=3):
+    """
+    Plot 2D trajectories of multiple bodies comparing true and predicted positions.
+
+    This function assumes that the state vector for each body is organized as
+    [x, y, vx, vy, ...] in `x` and `x_pred`. It plots the x-y trajectories 
+    of `num_bodies` bodies with solid lines for true positions and dashed lines
+    for predicted positions.
+
+    Args:
+        x (np.ndarray): True trajectories with shape
+            (num_time_steps, num_features). The features should be ordered per
+            body as [x1, y1, vx1, vy1, x2, y2, vx2, vy2, ...].
+        x_pred (np.ndarray): Predicted trajectories, same shape
+            and feature ordering as `x`.
+        num_bodies (int, optional): Number of bodies to plot. Defaults to 3.
+
+    Raises:
+        TypeError: If `x` or `x_pred` is not a NumPy array.
+
+    Returns:
+        None. Displays a Matplotlib figure with the trajectories.
+    
+    Notes:
+        - Only the x and y positions (first two features per body) are plotted.
+        - Velocities (vx, vy) are ignored for plotting.
+        - Line styles: '-' for true trajectory, '--' for predicted trajectory.
+    """
+    if not isinstance(x, np.ndarray) or not isinstance(x_pred, np.ndarray):
+        raise TypeError("Both x and x_pred must be NumPy arrays.")
+
+    plt.figure(figsize=(6, 6))
+
+    for i in range(num_bodies):
+     
+        plt.plot(x[:, 4*i], x[:, 4*i+1], label=f"True Body {i+1}", linestyle='-')
+        plt.plot(x_pred[:, 4*i], x_pred[:, 4*i+1], label=f"Pred Body {i+1}", linestyle='--')
+
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Three-body trajectories")
+    plt.axis("equal")
+    plt.legend()
+    plt.show()
