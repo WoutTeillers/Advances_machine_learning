@@ -148,16 +148,15 @@ class LSTM(nn.Module):
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     
-    # TODO: this function does not work anymore as the input is now a sliding window, 
-    # that causes issues with the input shape and how to form the input for the next step
-    def generate_timeseries(model, start_input, steps):
+    def generate_timeseries(model, start_sequence, steps, device='cpu'):
         """
         Efficiently generate a time series using a single-step model.
         
         Args:
-            model: PyTorch model that takes a single input and outputs a single next value.
-            start_input: np.ndarray or torch.Tensor of shape (input_size,)
+            model: PyTorch model with a sliding window input
+            start_sequence: np.ndarray or torch.Tensor of shape (window_size, input_size)
             steps: int, number of future steps to generate
+            device: str, 'cpu' or 'cuda'
 
         Returns:
             np.ndarray of shape (steps, input_size) containing generated values
@@ -165,22 +164,26 @@ class LSTM(nn.Module):
         model.eval()
 
         # Convert to tensor if needed and add batch dimension
-        if isinstance(start_input, np.ndarray):
-            input_t = torch.from_numpy(start_input).float().unsqueeze(0)
+        if isinstance(start_sequence, np.ndarray):
+            input_seq = torch.tensor(start_sequence, dtype=torch.float32).to(device)
         else:
-            input_t = start_input.float().unsqueeze(0)
+            input_seq = start_sequence.to(device).float()
 
         # Pre-allocate array for generated sequence
-        generated = torch.empty((steps, 12), dtype=torch.float32)
-        generated[0] = input_t
+        generated = []
+        window_size = input_seq.shape[0]
+        input_size = input_seq.shape[1]
 
         with torch.no_grad():
-            for i in range(1, steps-1):
-                output = model.forward(input_t)
-                generated[i] = output  # store output
-                input_t = output.unsqueeze(0)  # use as next input
+            for _ in range(steps):
+                input_t = input_seq.unsqueeze(0)
+                output = model(input_t)
 
-        return generated.numpy()
+                generated.append(output.squeeze(0).cpu().tolist())
+
+                seq = torch.cat((input_seq[1:], output), dim=0)
+
+        return np.array(generated)
 
 if __name__ == "__main__":
     # Example usage
