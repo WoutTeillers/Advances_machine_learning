@@ -67,7 +67,7 @@ def get_trajectories():
     ])
 
     # Time span for the simulation
-    eval_time = 10
+    eval_time = 100
     steps = 1000 * eval_time
     t_span = (0, eval_time)
     t_eval = np.linspace(0, eval_time, steps)
@@ -98,7 +98,7 @@ def get_trajectories():
     plt.axis("equal")
     plt.legend()
     plt.show()
-    print(type(sol))
+
     return x,y,vx,vy,t
 
 def plot_trajectories(x, x_pred, num_bodies=3):

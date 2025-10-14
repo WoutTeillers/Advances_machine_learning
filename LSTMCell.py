@@ -121,6 +121,8 @@ class LSTM(nn.Module):
                     y_val = torch.tensor(y_test, dtype=torch.float32)
                     val_outputs = self.forward(X_val)
                     val_loss = criterion(val_outputs, y_val).item()
+                     # Compute validation MSE
+                print('Epoch [{}/{}], Train Loss: {:.4f}, Val Loss: {:.4f}'.format(epoch+1, num_epochs, epoch_loss, val_loss))
                 fold_epoch_val.append(val_loss)
 
             fold_train_losses.append(fold_epoch_train)
@@ -146,6 +148,8 @@ class LSTM(nn.Module):
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     
+    # TODO: this function does not work anymore as the input is now a sliding window, 
+    # that causes issues with the input shape and how to form the input for the next step
     def generate_timeseries(model, start_input, steps):
         """
         Efficiently generate a time series using a single-step model.
