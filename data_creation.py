@@ -177,27 +177,21 @@ def plot_velocity_magnitude(data):
     plt.show()
 
 
-def transform_data(data, window_size=10, test_size=0.2, forcast_horizon=10):
+def transform_data(data, window_size=10, test_size=0.2, forecast_horizon=10):
     from sklearn.preprocessing import RobustScaler
+    print(data.shape)
 
-    # # Create lagged features
-    X = data[:-window_size]
-    y = data[window_size+forcast_horizon+1:]
+    scaler = RobustScaler()
+    scaled = scaler.fit_transform(data)
 
-    # # Split the data into training and test sets
-    train_size = int((1-test_size) * len(X))
+    # Build sliding windows with forecast horizon
+    X = np.array([scaled[i:i+window_size] for i in range(len(scaled) - window_size - forecast_horizon)])
+    y = np.array([scaled[i+window_size+forecast_horizon-1] for i in range(len(scaled) - window_size - forecast_horizon)])
+
+    # Split train/test
+    train_size = int((1 - test_size) * len(X))
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
 
-    scaler = RobustScaler()
-
-    # Fit on training data and transform
-    X_train = scaler.fit_transform(X_train)
-
-    # Transform test data using the same scaler
-    X_test = scaler.transform(X_test)
-
-    X_train = np.array([X_train[i:i+window_size] for i in range(len(X_train)-window_size)])
-    X_test = np.array([X_test[i:i+window_size] for i in range(len(X_test)-window_size)])
-
     return X_train, y_train, X_test, y_test, scaler
+    

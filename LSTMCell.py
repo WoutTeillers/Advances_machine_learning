@@ -79,12 +79,14 @@ class LSTM(nn.Module):
     def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=128, n_splits=5):
         from sklearn.model_selection import TimeSeriesSplit
         import torch
-        early_stopper = EarlyStopper(patience=3, min_delta=0.0001)
+        
         tscv = TimeSeriesSplit(n_splits=n_splits)
         fold_train_losses = []
         fold_val_losses = []
 
         for fold, (train_index, test_index) in enumerate(tscv.split(trainX)):
+            early_stopper = EarlyStopper(patience=3, min_delta=0.0001)
+
             print(f"Fold {fold + 1}")
             X_train, X_test = trainX[train_index], trainX[test_index]
             y_train, y_test = trainY[train_index], trainY[test_index]
@@ -183,7 +185,7 @@ class LSTM(nn.Module):
                 input_t = generated[i:i+sliding_window_size]
                 y_val = torch.tensor(Y_test[i], dtype=torch.float32)
                 loss = criterion(output, y_val).item()
-                print(loss, ",", print(y_val), ", ", print(output))
+                # print(loss, ",", y_val, ", ", output)
 
 
         return np.array(generated)
