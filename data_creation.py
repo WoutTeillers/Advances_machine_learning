@@ -145,3 +145,32 @@ def plot_trajectories(x, x_pred, num_bodies=3):
     plt.axis("equal")
     plt.legend()
     plt.show()
+
+def plot_boxplots(data):
+    data = np.asarray(data)
+    labels = ["x1","y1","vx1","vy1","x2","y2","vx2","vy2","x3","y3","vx3","vy3"]
+
+    plt.figure(figsize=(10,6))
+    plt.boxplot(data, labels=labels)
+    plt.title("Distribution of Positions and Velocities")
+    plt.ylabel("Value")
+    plt.xticks(rotation=45)
+    plt.grid(True, axis='y', linestyle='--', alpha=0.6)
+    plt.show()
+
+def plot_velocity_magnitude(data):
+    data = np.asarray(data)
+    vxs = data[:, [2, 6, 10]]
+    vys = data[:, [3, 7, 11]]
+    vmag = np.sqrt(vxs**2 + vys**2)  # (n, 3)
+
+    plt.figure(figsize=(8,5))
+    for i in range(3):
+        plt.plot(vmag[:, i], label=f"Body {i+1}")
+    plt.xlabel("Timestep")
+    plt.ylabel("Velocity magnitude")
+    plt.title("Velocity over Time")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+

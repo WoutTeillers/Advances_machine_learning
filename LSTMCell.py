@@ -76,7 +76,7 @@ class LSTM(nn.Module):
         return out
 
 
-    def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=32, n_splits=5):
+    def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=128, n_splits=5):
         from sklearn.model_selection import TimeSeriesSplit
         import torch
 
@@ -148,7 +148,7 @@ class LSTM(nn.Module):
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     
-    def generate_timeseries(model, start_sequence, steps, device='cpu'):
+    def generate_timeseries(model, start_sequence, steps, generated, device='cpu'):
         """
         Efficiently generate a time series using a single-step model.
         
@@ -162,26 +162,33 @@ class LSTM(nn.Module):
             np.ndarray of shape (steps, input_size) containing generated values
         """
         model.eval()
-
+        sliding_window_size = 10
         # Convert to tensor if needed and add batch dimension
         if isinstance(start_sequence, np.ndarray):
-            input_seq = torch.tensor(start_sequence, dtype=torch.float32).to(device)
+            input_t = torch.tensor(start_sequence, dtype=torch.float32).to(device)
         else:
-            input_seq = start_sequence.to(device).float()
+            input_t = start_sequence.to(device).float()
 
+        if isinstance(generated, np.ndarray):
+            generated = torch.tensor(generated, dtype=torch.float32).to(device)
+        else:
+            generated = generated.to(device).float()
+        
+        print(generated.shape, type(generated))
+        input_t = generated[:sliding_window_size]  # use the first 'window_size' elements as the initial input
+        print(input_t.shape, type(input_t))
         # Pre-allocate array for generated sequence
-        generated = []
-        window_size = input_seq.shape[0]
-        input_size = input_seq.shape[1]
+        
 
         with torch.no_grad():
-            for _ in range(steps):
-                input_t = input_seq.unsqueeze(0)
+            for i in range(1,steps+1):
+                input_t = input_t.unsqueeze(0)  # add batch dimension
+
                 output = model(input_t)
+                generated = torch.cat((generated, output), dim=0)
+                
+                input_t = generated[i:i+sliding_window_size]
 
-                generated.append(output.squeeze(0).cpu().tolist())
-
-                seq = torch.cat((input_seq[1:], output), dim=0)
 
         return np.array(generated)
 
