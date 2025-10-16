@@ -88,16 +88,16 @@ def get_trajectories():
     vx = state[:, 2, :] # shape (3, steps)
     vy = state[:, 3, :] # shape (3, steps)
 
-    plt.figure(figsize=(6, 6))
-    for i in range(n_bodies):
-        plt.plot(x[i], y[i], label=f"Body {i+1}")
+    # plt.figure(figsize=(6, 6))
+    # for i in range(n_bodies):
+    #     plt.plot(x[i], y[i], label=f"Body {i+1}")
 
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Three-body trajectories")
-    plt.axis("equal")
-    plt.legend()
-    plt.show()
+    # plt.xlabel("x")
+    # plt.ylabel("y")
+    # plt.title("Three-body trajectories")
+    # plt.axis("equal")
+    # plt.legend()
+    # plt.show()
 
     return x,y,vx,vy,t
 
@@ -138,6 +138,8 @@ def plot_trajectories(x, x_pred, num_bodies=3):
      
         plt.plot(x[:, 4*i], x[:, 4*i+1], label=f"True Body {i+1}", linestyle='-')
         plt.plot(x_pred[:, 4*i], x_pred[:, 4*i+1], label=f"Pred Body {i+1}", linestyle='--')
+        plt.scatter(x[0, 4*i], x[0, 4*i+1], color='blue', marker='o', s=50, edgecolor='black')
+        plt.scatter(x_pred[:, 4*i], x_pred[:, 4*i+1], color='orange', s=15, edgecolor='black', alpha=0.6)
 
     plt.xlabel("x")
     plt.ylabel("y")
@@ -174,3 +176,28 @@ def plot_velocity_magnitude(data):
     plt.grid(True)
     plt.show()
 
+
+def transform_data(data, window_size=10, test_size=0.2, forcast_horizon=10):
+    from sklearn.preprocessing import RobustScaler
+
+    # # Create lagged features
+    X = data[:-window_size]
+    y = data[window_size+forcast_horizon+1:]
+
+    # # Split the data into training and test sets
+    train_size = int((1-test_size) * len(X))
+    X_train, X_test = X[:train_size], X[train_size:]
+    y_train, y_test = y[:train_size], y[train_size:]
+
+    scaler = RobustScaler()
+
+    # Fit on training data and transform
+    X_train = scaler.fit_transform(X_train)
+
+    # Transform test data using the same scaler
+    X_test = scaler.transform(X_test)
+
+    X_train = np.array([X_train[i:i+window_size] for i in range(len(X_train)-window_size)])
+    X_test = np.array([X_test[i:i+window_size] for i in range(len(X_test)-window_size)])
+
+    return X_train, y_train, X_test, y_test, scaler
