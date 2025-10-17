@@ -45,7 +45,7 @@ X_train, y_train, X_test, y_test, scaler = transform_data(data, window_size=10, 
 import os
 import torch
 
-model_path = "models\model_20251016-174704.pt"
+model_path = "models\model_20251017-194538.pt"
 
 if os.path.exists(model_path):
     print("Loading saved model...")
@@ -53,18 +53,26 @@ if os.path.exists(model_path):
 
 from data_creation import plot_trajectories
 import torch.nn as nn
-steps = 100
+steps = 1000
 
 sliding_window = 10
 print(X_test.shape)
 generated = X_test[:19]
 generated = generated[:, 0, :]
 criterion = nn.MSELoss()
-output = model.generate_timeseries(steps=steps, generated=generated, Y_test= y_test, criterion=criterion, sliding_window_size=sliding_window)
+
+output = model.generate_timeseries(
+    steps=steps,
+    generated=generated,
+    Y_test= y_test,
+    criterion=criterion,
+    sliding_window_size=sliding_window
+)
+
 print(output[19:].shape)
 
 # remove middle dimension
 X_test_selected = X_test[:, 0, :]
-print(X_test_selected[19:steps+19].shape)
+print(y_test[:steps].shape)
 
-plot_trajectories(X_test_selected[19:steps+19], output[19:])
+plot_trajectories(y_test[:steps], output)

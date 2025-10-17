@@ -174,18 +174,16 @@ class LSTM(nn.Module):
         else:
             generated = generated.to(device).float()
         
-        input_t = generated[:sliding_window_size]  # use the first 'window_size' elements as the initial input        
-
         with torch.no_grad():
-            for i in range(1,steps+1):
-                input_t = input_t.unsqueeze(0)  # add batch dimension
-                output = model(input_t)
-                generated = torch.cat((generated, output), dim=0)
-                
+            for i in range(0,steps+1):
                 input_t = generated[i:i+sliding_window_size]
+                input_t = input_t.unsqueeze(0)  # add batch dimension
+
+                output = model(input_t)
+                generated = torch.cat((generated, output), dim=0)                
                 y_val = torch.tensor(Y_test[i], dtype=torch.float32)
                 loss = criterion(output, y_val).item()
-                # print(loss, ",", y_val, ", ", output)
+                print(loss)
 
 
         return np.array(generated)
