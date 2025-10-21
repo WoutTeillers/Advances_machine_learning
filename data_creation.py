@@ -88,16 +88,16 @@ def get_trajectories():
     vx = state[:, 2, :] # shape (3, steps)
     vy = state[:, 3, :] # shape (3, steps)
 
-    plt.figure(figsize=(6, 6))
-    for i in range(n_bodies):
-        plt.plot(x[i], y[i], label=f"Body {i+1}")
+    # plt.figure(figsize=(6, 6))
+    # for i in range(n_bodies):
+    #     plt.plot(x[i], y[i], label=f"Body {i+1}")
 
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Three-body trajectories")
-    plt.axis("equal")
-    plt.legend()
-    plt.show()
+    # plt.xlabel("x")
+    # plt.ylabel("y")
+    # plt.title("Three-body trajectories")
+    # plt.axis("equal")
+    # plt.legend()
+    # plt.show()
 
     return x,y,vx,vy,t
 
@@ -138,6 +138,8 @@ def plot_trajectories(x, x_pred, num_bodies=3):
      
         plt.plot(x[:, 4*i], x[:, 4*i+1], label=f"True Body {i+1}", linestyle='-')
         plt.plot(x_pred[:, 4*i], x_pred[:, 4*i+1], label=f"Pred Body {i+1}", linestyle='--')
+        plt.scatter(x[0, 4*i], x[0, 4*i+1], color='blue', marker='o', s=50, edgecolor='black')
+        plt.scatter(x_pred[:, 4*i], x_pred[:, 4*i+1], color='orange', s=15, edgecolor='black', alpha=0.6)
 
     plt.xlabel("x")
     plt.ylabel("y")
@@ -145,3 +147,51 @@ def plot_trajectories(x, x_pred, num_bodies=3):
     plt.axis("equal")
     plt.legend()
     plt.show()
+
+def plot_boxplots(data):
+    data = np.asarray(data)
+    labels = ["x1","y1","vx1","vy1","x2","y2","vx2","vy2","x3","y3","vx3","vy3"]
+
+    plt.figure(figsize=(10,6))
+    plt.boxplot(data, labels=labels)
+    plt.title("Distribution of Positions and Velocities")
+    plt.ylabel("Value")
+    plt.xticks(rotation=45)
+    plt.grid(True, axis='y', linestyle='--', alpha=0.6)
+    plt.show()
+
+def plot_velocity_magnitude(data):
+    data = np.asarray(data)
+    vxs = data[:, [2, 6, 10]]
+    vys = data[:, [3, 7, 11]]
+    vmag = np.sqrt(vxs**2 + vys**2)  # (n, 3)
+
+    plt.figure(figsize=(8,5))
+    for i in range(3):
+        plt.plot(vmag[:, i], label=f"Body {i+1}")
+    plt.xlabel("Timestep")
+    plt.ylabel("Velocity magnitude")
+    plt.title("Velocity over Time")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+def transform_data(data, window_size=10, test_size=0.2, forecast_horizon=10):
+    from sklearn.preprocessing import RobustScaler
+    print(data.shape)
+
+    scaler = RobustScaler()
+    scaled = scaler.fit_transform(data)
+
+    # Build sliding windows with forecast horizon
+    X = np.array([scaled[i:i+window_size] for i in range(len(scaled) - window_size - forecast_horizon)])
+    y = np.array([scaled[i+window_size+forecast_horizon-1] for i in range(len(scaled) - window_size - forecast_horizon)])
+
+    # Split train/test
+    train_size = int((1 - test_size) * len(X))
+    X_train, X_test = X[:train_size], X[train_size:]
+    y_train, y_test = y[:train_size], y[train_size:]
+
+    return X_train, y_train, X_test, y_test, scaler
+    

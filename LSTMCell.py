@@ -76,15 +76,17 @@ class LSTM(nn.Module):
         return out
 
 
-    def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=32, n_splits=5):
+    def training_loop_cv(self, num_epochs=100, optimizer=None, criterion=None, trainX=None, trainY=None, batch_size=128, n_splits=5):
         from sklearn.model_selection import TimeSeriesSplit
         import torch
-
+        
         tscv = TimeSeriesSplit(n_splits=n_splits)
         fold_train_losses = []
         fold_val_losses = []
 
         for fold, (train_index, test_index) in enumerate(tscv.split(trainX)):
+            early_stopper = EarlyStopper(patience=3, min_delta=0.0001)
+
             print(f"Fold {fold + 1}")
             X_train, X_test = trainX[train_index], trainX[test_index]
             y_train, y_test = trainY[train_index], trainY[test_index]
@@ -125,6 +127,10 @@ class LSTM(nn.Module):
                 print('Epoch [{}/{}], Train Loss: {:.4f}, Val Loss: {:.4f}'.format(epoch+1, num_epochs, epoch_loss, val_loss))
                 fold_epoch_val.append(val_loss)
 
+                if early_stopper.early_stop(val_loss):    
+                    print("Early stopping triggered")         
+                    break
+
             fold_train_losses.append(fold_epoch_train)
             fold_val_losses.append(fold_epoch_val)
 
@@ -148,7 +154,7 @@ class LSTM(nn.Module):
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
     
-    def generate_timeseries(model, start_sequence, steps, device='cpu'):
+    def generate_timeseries(model, steps, generated, Y_test, criterion, device='cpu', sliding_window_size=10):
         """
         Efficiently generate a time series using a single-step model.
         
@@ -163,27 +169,42 @@ class LSTM(nn.Module):
         """
         model.eval()
 
-        # Convert to tensor if needed and add batch dimension
-        if isinstance(start_sequence, np.ndarray):
-            input_seq = torch.tensor(start_sequence, dtype=torch.float32).to(device)
+        if isinstance(generated, np.ndarray):
+            generated = torch.tensor(generated, dtype=torch.float32).to(device)
         else:
-            input_seq = start_sequence.to(device).float()
-
-        # Pre-allocate array for generated sequence
-        generated = []
-        window_size = input_seq.shape[0]
-        input_size = input_seq.shape[1]
-
+            generated = generated.to(device).float()
+        
         with torch.no_grad():
-            for _ in range(steps):
-                input_t = input_seq.unsqueeze(0)
+            for i in range(0,steps+1):
+                input_t = generated[i:i+sliding_window_size]
+                input_t = input_t.unsqueeze(0)  # add batch dimension
+
                 output = model(input_t)
+                generated = torch.cat((generated, output), dim=0)                
+                y_val = torch.tensor(Y_test[i], dtype=torch.float32)
+                loss = criterion(output, y_val).item()
+                print(loss)
 
-                generated.append(output.squeeze(0).cpu().tolist())
-
-                seq = torch.cat((input_seq[1:], output), dim=0)
 
         return np.array(generated)
+
+# https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = float('inf')
+
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
 
 if __name__ == "__main__":
     # Example usage
