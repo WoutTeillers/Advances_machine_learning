@@ -68,7 +68,7 @@ def save_model(model, path='models/model', i=0):
             torch.save(model.state_dict(), path)
             return f'Model saved successfully at path {dir_name}.'
         else:
-            save_model(model, path, i+1)
+            return save_model(model, path, i+1)
     except RecursionError:
         return 'Failed to save model after multiple attempts.'
 
