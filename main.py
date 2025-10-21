@@ -7,54 +7,88 @@ import os
 import pickle
 import torch
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import KFold
+
+def load_data():
+    if not os.path.exists('data/trajectories.npy'):
+        sol = get_trajectories()  # x,y,vx,vy,t
+        pickle.dump(sol, open('data/trajectories.npy', 'wb'))
+    else:
+        sol = np.load('data/trajectories.npy', allow_pickle=True)
+    return sol
+    
+def data_preperation(sol, train_test_split=0.85): 
+    x,y,vx,vy,t = sol
+
+    data = np.vstack((x, y, vx, vy)).T
+    
+    print(data.dtype)
+    print(f"Data shape: {data.shape}")
+    
+    train_end = int(train_test_split * len(data))
+    
+    train_data = data[:train_end]
+    test_data = data[train_end:]
+    print(f"Train data shape: {train_data.shape}\nTest data shape: {test_data.shape}")
+
+    return train_data, test_data
 
 
-if not os.path.exists('data/trajectories.npy'):
-    sol = get_trajectories()  # x,y,vx,vy,t
-    pickle.dump(sol, open('data/trajectories.npy', 'wb'))
-else:
-    sol = np.load('data/trajectories.npy', allow_pickle=True)
-
-x,y,vx,vy,t = sol
+def generate_xy(data, lag=1):
+    X = torch.tensor(data[:-lag])
+    y = torch.tensor(data[lag:])
+    return X, y
 
 
-data = np.vstack((x, y, vx, vy)).T
-print(data.dtype)
-print(f"Data shape: {data.shape}")
-split_point = int(0.8 * len(data))
-train_data = data[:split_point]
-test_data = data[split_point:]
-print(f"Train data shape: {train_data.shape}\nTest data shape: {test_data.shape}")
-
-scaler = MinMaxScaler(feature_range=(0, 1))  
-scaler.fit(train_data) 
-train_data = scaler.transform(train_data)  
-test_data = scaler.transform(test_data)
-
-lag = 1
-X_train, y_train = torch.tensor(train_data[:-lag]), torch.tensor(train_data[lag:])
-print(X_train.dtype)
-X_test, y_test = torch.tensor(test_data[:-lag]), torch.tensor(test_data[lag:])
-print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+def normalize_data(train_data, test_data, scaler=None):
+    if scaler is None:
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaler.fit(train_data)
+    normalized_train_data = scaler.transform(train_data)
+    normalized_test_data = scaler.transform(test_data)
+    return normalized_train_data, normalized_test_data, scaler
 
 
-model = LSTM(input_size=12, hidden_size=50, output_size=12, initializer_method='xavier')
-earlystopping = EarlyStopping(patience=1, verbose=True) # delta could be 1e-4/5/6/
-trainer = Trainer(model, learning_rate=0.01, early_stopping=earlystopping)
-trainer.train(X_train, y_train, X_test, y_test, epochs=100)
-
-trainer.plot_losses()
-
-
-steps = 2000
-true = y_test[:steps]
-output = model.generate_timeseries(X_test[:1000], steps=steps)
+def cross_validation_split(X, y, n_splits=5):
+    # Note; split could harm the timeseries
+    kf = KFold(n_splits=n_splits, shuffle=False)
+    splits = []
+    for train_index, val_index in kf.split(X):
+        X_train, X_val = torch.tensor(X[train_index]), torch.tensor(X[val_index])
+        y_train, y_val = torch.tensor(y[train_index]), torch.tensor(y[val_index])
+        splits.append((X_train, y_train, X_val, y_val))
+    return splits
 
 
-true = true.detach().numpy()
-true = scaler.inverse_transform(true)
-output = output.detach().numpy()
-print(output.shape)
-output = scaler.inverse_transform(output)
-print(type(true), type(output))
-plot_trajectories(true, output)
+def main():
+    sol = load_data()
+    train_data, test_data = data_preperation(sol, train_test_split=0.85)
+    train_data, test_data, scaler = normalize_data(train_data, test_data)
+    X_train, y_train = generate_xy(train_data, lag=1)
+    X_test, y_test = generate_xy(test_data, lag=1)
+    splits = cross_validation_split(train_data, train_data, n_splits=5)
+
+    model = LSTM(input_size=12, hidden_size=50, output_size=12, initializer_method='xavier')
+    earlystopping = EarlyStopping(patience=1, verbose=True) # delta could be 1e-4/5/6/
+    trainer = Trainer(model, learning_rate=0.01, early_stopping=earlystopping)
+    trainer.train(X_train, y_train, X_test, y_test, epochs=100)
+
+    trainer.plot_losses()
+
+
+    steps = 2000
+    true = y_test[:steps]
+    output = model.generate_timeseries(X_test[:1000], steps=steps)
+
+
+    true = true.detach().numpy()
+    true = scaler.inverse_transform(true)
+    output = output.detach().numpy()
+    print(output.shape)
+    output = scaler.inverse_transform(output)
+    print(type(true), type(output))
+    plot_trajectories(true, output)
+
+
+if __name__ == "__main__":
+    main()

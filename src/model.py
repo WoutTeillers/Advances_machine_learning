@@ -1,5 +1,7 @@
 import numpy as np
 
+
+# inspired by https://towardsdatascience.com/the-math-behind-lstm-9069b835289d/
 class WeightInitializer:
     def __init__(self, method='random'):
         self.method = method
