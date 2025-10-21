@@ -195,7 +195,7 @@ if __name__ == "__main__":
     print(model)
     sample_input = torch.randn(1, 5, input_window_size)
     sample_input = sample_input.to("cuda" if torch.cuda.is_available() else "cpu")
-    output = model(sample_input) 
+    output = model(sample_input)
     print(output)  # Should output torch.Size([1, 12])
 
 
