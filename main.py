@@ -60,6 +60,19 @@ def cross_validation_split(X, y, n_splits=5):
     return splits
 
 
+def save_model(model, path='models/model', i=0):
+    # check if model directory exists
+    dir_name = os.path.dirname(path+i+'.pt')
+    try:
+        if not os.path.exists(dir_name):
+            torch.save(model.state_dict(), path)
+            return f'Model saved successfully at path {dir_name}.'
+        else:
+            save_model(model, path, i+1)
+    except RecursionError:
+        return 'Failed to save model after multiple attempts.'
+
+
 def main():
     sol = load_data()
     train_data, test_data = data_preperation(sol, train_test_split=0.85)
@@ -75,7 +88,6 @@ def main():
 
     trainer.plot_losses()
 
-
     steps = 2000
     true = y_test[:steps]
     output = model.generate_timeseries(X_test[:1000], steps=steps)
@@ -88,6 +100,10 @@ def main():
     output = scaler.inverse_transform(output)
     print(type(true), type(output))
     plot_trajectories(true, output)
+
+    model_save_path = 'models/lstm_model'
+    save_message = save_model(model, path=model_save_path)
+    print(save_message)
 
 
 if __name__ == "__main__":
