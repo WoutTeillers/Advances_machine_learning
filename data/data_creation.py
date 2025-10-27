@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 G = 1.0  # Gravitational constant
 masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
 
+G = 1.0  # Gravitational constant
+masses = [1.0, 1.0, 1.0]  # Masses of the three bodies
+
 def three_body_equations(t, y):
     """
     We input a vector with x, y, x-velocity and y-velocity of the three
@@ -50,25 +53,17 @@ def three_body_equations(t, y):
 
     return dydt
 
-
 def get_trajectories():
-
     # Initial position and velocities as a 12-D vector
     y0 = np.array([
-        -1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the first body
-        1.0, 0.0, 0.3471, 0.5327,   # The x, y, vx and vy of the second body
-        0.0, 0.0, -2*0.3471, -2*0.5327    # The x, y, vx and vy of the third body
-    ])
-
-    y0 = np.array([
-        -1.0, 0.0, 0.1, 0.1 ,   # The x, y, vx and vy of the first body
+        -1.0, 0.0, 0.1, 0.1,   # The x, y, vx and vy of the first body
         1.0, 0.0, 0.0, -0.1,   # The x, y, vx and vy of the second body
         0.0, 1.0, -0.1, 0.0    # The x, y, vx and vy of the third body
     ])
+    # I took these randomly but these initial conditions resulted in a nice plot.
 
-    # Time span for the simulation
-    eval_time = 100
-    steps = 1000 * eval_time
+    eval_time = 10
+    steps = 10000
     t_span = (0, eval_time)
     t_eval = np.linspace(0, eval_time, steps)
 
@@ -118,3 +113,16 @@ def plot_trajectories(x, x_pred=None, num_bodies=3):
     plt.axis("equal")
     plt.legend()
     plt.show()
+
+
+def main():
+    sol = get_trajectories()  # x,y,vx,vy,t
+    x,y,vx,vy,t = sol
+
+    data = np.vstack((x, y, vx, vy)).T  # shape (steps, 12)
+
+    plot_trajectories(data)
+
+
+if __name__ == "__main__":
+    main()

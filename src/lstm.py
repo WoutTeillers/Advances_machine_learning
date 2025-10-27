@@ -72,7 +72,7 @@ class LSTM(nn.Module):
             steps = x.shape[0]
         for t in range(steps):
             if t >= x.shape[0]:
-                x_t = outputs[-1].unsqueeze(1)
+                x_t = outputs[-50].unsqueeze(1)
             else:
                 x_t = x[t].unsqueeze(1)
             #print(x_t.shape)
@@ -109,6 +109,7 @@ class LSTM(nn.Module):
         self.eval()
         h, c = None, None
         output, (h, c) = self.forward(input_seq, h, c, steps)
+        output = output[input_seq.shape[0]:]
         return output
 
 

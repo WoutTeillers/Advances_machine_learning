@@ -101,7 +101,7 @@ def get_trajectories():
 
     return x,y,vx,vy,t
 
-def plot_trajectories(x, x_pred, num_bodies=3):
+def plot_trajectories2(x, x_pred, num_bodies=3):
     """
     Plot 2D trajectories of multiple bodies comparing true and predicted positions.
 
