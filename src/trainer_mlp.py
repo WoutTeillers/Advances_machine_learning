@@ -4,6 +4,8 @@ import torch
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 from sklearn.model_selection import TimeSeriesSplit
+from src.timeseriesdataloader import TimeSeriesDataset
+from torch.utils.data import DataLoader
 
 
 class EarlyStopping:
@@ -77,22 +79,29 @@ class Trainer:
             print(f"fold {fold + 1}")
             self.early_stopping.reset()
 
+
             train_idx_t = torch.tensor(train_idx, dtype=torch.long, device=device)
             test_idx_t  = torch.tensor(test_idx,  dtype=torch.long, device=device)
 
-            X_tr, y_tr = trainX[train_idx_t], trainY[train_idx_t]
+            train_dataset = TimeSeriesDataset(trainX[train_idx_t], trainY[train_idx_t])
             X_val, y_val = trainX[test_idx_t], trainY[test_idx_t]
+
+            train_dataloader = DataLoader(train_dataset, batch_size=500, shuffle=True)
 
             fold_train_losses = []
             fold_val_losses = []
 
             for epoch in range(epochs):
                 self.model.train()
-                self.optimizer.zero_grad()
-                output = self.model(X_tr)
-                loss = self.criterion(output, y_tr)
-                loss.backward()
-                self.optimizer.step()
+                running_loss = 0.0
+                for idx, (X_batch, y_batch) in enumerate(train_dataloader):
+                    #print(f'batch: {idx+1}/{len(train_dataloader)}')
+                    self.optimizer.zero_grad()
+                    output = self.model(X_batch)
+                    loss = self.criterion(output, y_batch)
+                    loss.backward()
+                    self.optimizer.step()
+                    running_loss += loss.item()
                 fold_train_losses.append(loss.item())
 
                 self.model.eval()

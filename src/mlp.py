@@ -22,6 +22,10 @@ class MLP(nn.Module):
                 if initializer_method == "xavier" and isinstance(layer, nn.Linear):
                     nn.init.xavier_uniform_(layer.weight)
 
+            for layer in self.seq:
+                if initializer_method == "kaiming" and isinstance(layer, nn.Linear):
+                    nn.init.kaiming_uniform_(layer.weight, nonlinearity="relu")
+
 
     def forward(self, x):
         inp = self.sigmoid(x)

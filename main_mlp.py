@@ -13,6 +13,8 @@ from data.data_creation import plot_trajectories
 import torch.nn as nn
 import math
 from sklearn.metrics import r2_score
+from src.timeseriesdataloader import TimeSeriesDataset
+from torch.utils.data import DataLoader
 
 
 
@@ -136,10 +138,13 @@ def main():
     sol = load_data()
     train_data, test_data = data_preperation(sol, train_test_split=0.85)
 
+    '''
     scaler = make_pipeline(
         RobustScaler(),
         MinMaxScaler(feature_range=(0, 1))
-        )
+        )'''
+    
+
 
     train_data, test_data, scaler = normalize_data(train_data, test_data)
     # splits = cross_validation_split(train_data, train_data, n_splits=5)
@@ -150,6 +155,8 @@ def main():
 
     X_train, y_train = generate_xy(train_data, lag=10, history=1)
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
+
+
     trainer.train(X_train, y_train, epochs=100)
 
 
@@ -168,15 +175,26 @@ def main():
     
     print(f"r2 on test data = {r2}, MSE: {mse_error}")
 
+    # change output back to full 12 dimensions by adding zeros for vx, vy
+    out_full = np.zeros((output.shape[0], 12))
+    out_full[:, :6] = output
+    output = scaler.inverse_transform(out_full)
 
-    output = scaler.inverse_transform(output)
-    true = scaler.inverse_transform(y_test)
+    
+    # change y_test back to full 12 dimensions by adding zeros for vx, vy
+    y_test_full = np.zeros((y_test.shape[0], 12))
+    y_test_full[:, :6] = y_test
+    true = scaler.inverse_transform(y_test_full)
+
     plot_trajectories(true[:5000], output[:5000])
 
+
+
+    '''
     generated = X_test[:10]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
     y_pred = scaler.inverse_transform(y_pred)
-    plot_trajectories(true[:5000], y_pred[:5000])
+    plot_trajectories(true[:5000], y_pred[:5000])'''
 
 
 
