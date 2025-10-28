@@ -115,16 +115,16 @@ def append_velocities(t, t_n, scaler, deltat, lag):
     t_n_scaled[:, :6] = t_n.numpy()
     t_n_unscaled = scaler.inverse_transform(t_n_scaled)
     t_n_positions = t_n_unscaled[:, :6]
-    print(t_n_positions.shape)
+    # print(t_n_positions.shape)
 
     t_positions = t_unscaled[:, :6]
     difference = t_n_positions - t_positions
     velocities = difference / (deltat*lag)
-    print(velocities.shape, t_n.shape)
+    # print(velocities.shape, t_n.shape)
     t_new_vel = np.hstack((t_n_positions, velocities))
-    print(t_new_vel.shape)
+    # print(t_new_vel.shape)
     t_new_scaled = scaler.transform(t_new_vel)
-    print(t_new_scaled.shape)
+    # print(t_new_scaled.shape)
     return torch.tensor(t_new_scaled)
 
 
@@ -286,7 +286,7 @@ def main():
         model,
         learning_rate=0.0001,
         early_stopping=earlystopping,
-        epochs=1)
+        epochs=100)
 
     X_train, y_train = generate_xy(train_data, lag=10, history=1)
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
@@ -332,7 +332,7 @@ def main():
     
     generated = X_test[:10]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
-    output = scaler.inverse_transform(output)
+    output = scaler.inverse_transform(y_pred)
      # change y_test back to full 12 dimensions by adding zeros for vx, vy
     y_test_full = np.zeros((y_test.shape[0], 12))
     y_test_full[:, :6] = y_test
