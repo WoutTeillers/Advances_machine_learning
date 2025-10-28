@@ -158,6 +158,7 @@ def generate_timeseries(model, steps, generated, Y_test, criterion, scaler, devi
             generated = torch.cat((generated, output), dim=0)           
             y_val = torch.tensor(Y_test[i], dtype=torch.float32)
 
+    print(generated.shape)
     return np.array(generated)
 
 
@@ -285,18 +286,20 @@ def main():
         model,
         learning_rate=0.0001,
         early_stopping=earlystopping,
-        epochs=20)
+        epochs=1)
 
-    X_train, y_train = generate_xy(train_data, lag=lag, history=1)
-    X_test, y_test = generate_xy(test_data, lag=lag, history=1)
+    X_train, y_train = generate_xy(train_data, lag=10, history=1)
+    X_test, y_test = generate_xy(test_data, lag=10, history=1)
+
     trainer.train(X_train, y_train)
 
-    # grid_search(
-    #     X_train=X_train,
-    #     y_train=y_train,
-    #     X_test=X_test,
-    #     y_test=y_test
-    # )
+    '''
+    grid_search(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test
+    )'''
 
     # run on test data
     device = next(model.parameters()).device
@@ -329,8 +332,13 @@ def main():
     
     generated = X_test[:10]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
-    y_pred = scaler.inverse_transform(y_pred)
-    plot_trajectories(true[:5000], y_pred[:5000])
+    output = scaler.inverse_transform(output)
+     # change y_test back to full 12 dimensions by adding zeros for vx, vy
+    y_test_full = np.zeros((y_test.shape[0], 12))
+    y_test_full[:, :6] = y_test
+    true = scaler.inverse_transform(y_test_full)
+
+    plot_trajectories(true[:5000], output[:5000])
 
 
 
