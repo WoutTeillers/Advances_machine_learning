@@ -12,6 +12,8 @@ from sklearn.model_selection import KFold
 from data.data_creation import plot_trajectories
 import torch.nn as nn
 import math
+from sklearn.metrics import r2_score
+
 
 
 def load_data():
@@ -65,8 +67,9 @@ def normalize_data(train_data, test_data, scaler=None):
 
 
 def cross_validation_split(X, y, n_splits=5):
+    from sklearn.model_selection import TimeSeriesSplit
     # Note; split could harm the timeseries
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=44)
+    kf = TimeSeriesSplit(n_splits=n_splits)
     splits = []
     for train_index, val_index in kf.split(X):
         X_train, X_val = torch.tensor(X[train_index]), torch.tensor(X[val_index])
@@ -98,6 +101,36 @@ def relative_mse(y_pred, y_true, eps=1e-8):
     rel_mse = ((y_pred - y_true)**2) / (y_true**2 + eps)    
     return torch.mean(rel_mse)
 
+def generate_timeseries(model, steps, generated, Y_test, criterion, device='cpu'):
+    """
+    Efficiently generate a time series using a single-step model.
+    
+    Args:
+        model: PyTorch model with a sliding window input
+        start_sequence: np.ndarray or torch.Tensor of shape (window_size, input_size)
+        steps: int, number of future steps to generate
+        device: str, 'cpu' or 'cuda'
+
+    Returns:
+        np.ndarray of shape (steps, input_size) containing generated values
+    """
+    model.eval()
+
+    device = next(model.parameters()).device
+    dtype = next(model.parameters()).dtype
+    generated = generated.to(device).to(dtype)
+    
+    with torch.no_grad():
+        for i in range(0,steps+1):
+            input_t = generated[i]
+            input_t = input_t.unsqueeze(0)  # add batch dimension
+            print(input_t.shape)
+            output = model(input_t)
+            generated = torch.cat((generated, output), dim=0)                
+            y_val = torch.tensor(Y_test[i], dtype=torch.float32)
+
+    return np.array(generated)
+
 
 def main():
     sol = load_data()
@@ -109,16 +142,15 @@ def main():
         )
 
     train_data, test_data, scaler = normalize_data(train_data, test_data)
-    splits = cross_validation_split(train_data, train_data, n_splits=5)
+    # splits = cross_validation_split(train_data, train_data, n_splits=5)
 
-    model = MLP(input_size=12*1, layers=[256 for i in range(10)], output_size=6, initializer_method='xavier', activation=nn.ReLU)
-    earlystopping = EarlyStopping(patience=2) # delta could be 1e-4/5/6/
-    trainer = Trainer(model, learning_rate=0.00001, early_stopping=earlystopping)
-    #X_train, y_train, X_test, y_test = splits[0]
+    model = MLP(input_size=12*1, layers=[256 for i in range(3)], output_size=6, initializer_method='xavier', activation=nn.ReLU)
+    earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
+    trainer = Trainer(model, learning_rate=0.0001, early_stopping=earlystopping)
 
-    X_train, y_train = generate_xy(train_data, lag=1, history=1)
-    X_test, y_test = generate_xy(test_data, lag=1, history=1)
-    trainer.train(X_train, y_train, X_test, y_test, epochs=500)
+    X_train, y_train = generate_xy(train_data, lag=10, history=1)
+    X_test, y_test = generate_xy(test_data, lag=10, history=1)
+    trainer.train(X_train, y_train, epochs=100)
 
 
     device = next(model.parameters()).device
@@ -127,27 +159,24 @@ def main():
 
 
     output = model.forward(X_test)
+    
+    criterion = torch.nn.MSELoss()
+    mse_error = criterion(output, y_test.to(device).to(dtype))
     output = output.detach().numpy()
-    # change output back to full 12 dimensions by adding zeros for vx, vy
-    out_full = np.zeros((output.shape[0], 12))
-    out_full[:, :6] = output
-    output = scaler.inverse_transform(out_full)
-    out = output
 
-    # change y_test back to full 12 dimensions by adding zeros for vx, vy
-    y_test_full = np.zeros((y_test.shape[0], 12))
-    y_test_full[:, :6] = y_test
-
-    true = scaler.inverse_transform(y_test_full)
-    true = true
-    print(out.shape)
-    print(true.shape)
-    print(type(true), type(out))
+    r2 = r2_score(y_test, output)
     
-    plot_trajectories(true, out)
+    print(f"r2 on test data = {r2}, MSE: {mse_error}")
 
-    
 
+    output = scaler.inverse_transform(output)
+    true = scaler.inverse_transform(y_test)
+    plot_trajectories(true[:5000], output[:5000])
+
+    generated = X_test[:10]
+    y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
+    y_pred = scaler.inverse_transform(y_pred)
+    plot_trajectories(true[:5000], y_pred[:5000])
 
 
 

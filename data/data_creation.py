@@ -102,10 +102,10 @@ def plot_trajectories(x, x_pred=None, num_bodies=3):
     plt.figure(figsize=(6,6))
     for i in range(num_bodies):
      
-        plt.plot(x[:, 4*i], x[:, 4*i+1], label=f"True Body {i+1}", linestyle='-')
-        plt.plot(x_pred[:, 4*i], x_pred[:, 4*i+1], label=f"Pred Body {i+1}", linestyle='--')
-        plt.scatter(x[0, 4*i], x[0, 4*i+1], color='blue', marker='o', s=50, edgecolor='black')
-        plt.scatter(x_pred[:, 4*i], x_pred[:, 4*i+1], color='orange', s=15, edgecolor='black', alpha=0.6)
+        plt.plot(x[:, i], x[:, i+3], label=f"True Body {i+1}", linestyle='-')
+        plt.plot(x_pred[:, i], x_pred[:, i+3], label=f"Pred Body {i+1}", linestyle='--')
+        plt.scatter(x[0, i], x[0, i+3], color='blue', marker='o', s=50, edgecolor='black')
+        plt.scatter(x_pred[0, i], x_pred[0, i+3], color='orange', marker='x', s=15, edgecolor='black')
         
     plt.xlabel("x")
     plt.ylabel("y")

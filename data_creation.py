@@ -101,7 +101,7 @@ def get_trajectories():
 
     return x,y,vx,vy,t
 
-def plot_trajectories2(x, x_pred, num_bodies=3):
+def plot_trajectories(x, x_pred, num_bodies=3):
     """
     Plot 2D trajectories of multiple bodies comparing true and predicted positions.
 
@@ -129,18 +129,16 @@ def plot_trajectories2(x, x_pred, num_bodies=3):
         - Velocities (vx, vy) are ignored for plotting.
         - Line styles: '-' for true trajectory, '--' for predicted trajectory.
     """
-    if not isinstance(x, np.ndarray) or not isinstance(x_pred, np.ndarray):
-        raise TypeError("Both x and x_pred must be NumPy arrays.")
-
-    plt.figure(figsize=(6, 6))
-
+    # x is (steps, 12) in order [x1,x2,x3, y1,y2,y3, vx1,vx2,vx3, vy1,vy2,vy3]
+    colors = {0: 'r', 1: 'g', 2: 'b'}
+    plt.figure(figsize=(6,6))
     for i in range(num_bodies):
-     
-        plt.plot(x[:, 4*i], x[:, 4*i+1], label=f"True Body {i+1}", linestyle='-')
-        plt.plot(x_pred[:, 4*i], x_pred[:, 4*i+1], label=f"Pred Body {i+1}", linestyle='--')
-        plt.scatter(x[0, 4*i], x[0, 4*i+1], color='blue', marker='o', s=50, edgecolor='black')
-        plt.scatter(x_pred[:, 4*i], x_pred[:, 4*i+1], color='orange', s=15, edgecolor='black', alpha=0.6)
-
+    
+        plt.plot(x[:, i], x[:, i+3], label=f"True Body {i+1}", linestyle='-')
+        plt.plot(x_pred[:, i], x_pred[:, i+3], label=f"Pred Body {i+1}", linestyle='--')
+        plt.scatter(x[0, i], x[0, i+3], color='blue', marker='o', s=50, edgecolor='black')
+        plt.scatter(x_pred[:, i], x_pred[:, i+3], color='orange', s=15, edgecolor='black', alpha=0.6)
+        
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Three-body trajectories")
@@ -148,9 +146,15 @@ def plot_trajectories2(x, x_pred, num_bodies=3):
     plt.legend()
     plt.show()
 
+
 def plot_boxplots(data):
     data = np.asarray(data)
-    labels = ["x1","y1","vx1","vy1","x2","y2","vx2","vy2","x3","y3","vx3","vy3"]
+    labels = [
+        "x1", "x2", "x3",
+        "y1", "y2", "y3",
+        "vx1", "vx2", "vx3",
+        "vy1", "vy2", "vy3"
+    ]
 
     plt.figure(figsize=(10,6))
     plt.boxplot(data, labels=labels)
@@ -178,7 +182,7 @@ def plot_velocity_magnitude(data):
 
 
 def transform_data(data, window_size=10, test_size=0.2, forecast_horizon=10):
-    from sklearn.preprocessing import RobustScaler
+    from sklearn.preprocessing import RobustScaler, MinMaxScaler
     print(data.shape)
 
     scaler = RobustScaler()
