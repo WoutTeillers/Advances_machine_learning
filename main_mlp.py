@@ -103,7 +103,29 @@ def relative_mse(y_pred, y_true, eps=1e-8):
     rel_mse = ((y_pred - y_true)**2) / (y_true**2 + eps)    
     return torch.mean(rel_mse)
 
-def generate_timeseries(model, steps, generated, Y_test, criterion, device='cpu'):
+
+def append_velocities(t, t_n, scaler, deltat, lag):
+
+    t = t.unsqueeze(0)
+    t_unscaled = scaler.inverse_transform(t.numpy())
+
+    t_n_scaled = np.zeros((1, 12))
+    t_n_scaled[:, :6] = t_n.numpy()
+    t_n_unscaled = scaler.inverse_transform(t_n_scaled)
+    t_n_positions = t_n_unscaled[:, :6]
+
+    t_positions = t_unscaled[:, :6]
+    difference = t_n_positions - t_positions
+    velocities = difference / (deltat)*lag
+    print(velocities.shape, t_n.shape)
+    t_new_vel = np.hstack((t_n_positions, velocities))
+    print(t_new_vel.shape)
+    t_new_scaled = scaler.transform(t_new_vel)
+    print(t_new_scaled.shape)
+    return torch.tensor(t_new_scaled)
+
+
+def generate_timeseries(model, steps, generated, Y_test, criterion, scaler, device='cpu', deltat=1e-3, lag=10):
     """
     Efficiently generate a time series using a single-step model.
     
@@ -128,7 +150,10 @@ def generate_timeseries(model, steps, generated, Y_test, criterion, device='cpu'
             input_t = input_t.unsqueeze(0)  # add batch dimension
             print(input_t.shape)
             output = model(input_t)
-            generated = torch.cat((generated, output), dim=0)                
+            print(output.shape)
+            output = append_velocities(input_t.squeeze(0), output, scaler, deltat, lag)
+            output = output.to(device).to(dtype)
+            generated = torch.cat((generated, output), dim=0)           
             y_val = torch.tensor(Y_test[i], dtype=torch.float32)
 
     return np.array(generated)
@@ -157,7 +182,7 @@ def main():
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
 
 
-    trainer.train(X_train, y_train, epochs=100)
+    trainer.train(X_train, y_train, epochs=1)
 
 
     device = next(model.parameters()).device
@@ -190,11 +215,11 @@ def main():
 
 
 
-    '''
+    
     generated = X_test[:10]
-    y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
+    y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
     y_pred = scaler.inverse_transform(y_pred)
-    plot_trajectories(true[:5000], y_pred[:5000])'''
+    plot_trajectories(true[:5000], y_pred[:5000])
 
 
 
