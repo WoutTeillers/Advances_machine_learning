@@ -13,6 +13,8 @@ from data.data_creation import plot_trajectories
 import torch.nn as nn
 import math
 from sklearn.metrics import r2_score
+from itertools import product
+import pandas as pd
 
 
 
@@ -124,12 +126,107 @@ def generate_timeseries(model, steps, generated, Y_test, criterion, device='cpu'
         for i in range(0,steps+1):
             input_t = generated[i]
             input_t = input_t.unsqueeze(0)  # add batch dimension
-            print(input_t.shape)
             output = model(input_t)
             generated = torch.cat((generated, output), dim=0)                
             y_val = torch.tensor(Y_test[i], dtype=torch.float32)
 
     return np.array(generated)
+
+
+def grid_search(X_train, y_train, X_test, y_test):
+
+
+    # define the grid search parameters
+    param_grid = {
+        'num_layers': [3, 5, 10, 12],
+        'num_nodes': [64, 256, 512],
+        'learning_rate': [1e-2, 1e-3, 1e-4, 1e-5],
+        'epochs': [50, 100, 500],
+        'optimizer': ['SGD', 'RMSprop', "ADAM"],
+        'num_splits': [5, 10]
+    }
+
+
+    # generate combinations
+    keys = list(param_grid.keys())
+    combinations = [dict(zip(keys, values)) for values in product(*param_grid.values())]
+    print(f"Total combinations to try: {len(combinations)}")
+
+    results_path = "grid_search_results_mlp.csv"
+    if os.path.exists(results_path):
+        results_df = pd.read_csv(results_path)
+    else:
+        results_df = pd.DataFrame(columns=keys + ["test_loss"])
+
+    best_val_loss = results_df["test_loss"].min() if not results_df.empty else float('inf')
+    best_params = None
+    best_model_state = None
+
+    for combo in combinations:
+        mask = (results_df[list(combo.keys())] == pd.Series(combo)).all(axis=1)
+        if mask.any():
+            print(f"Skipping already completed combo: {combo}")
+            continue
+
+        print(f"Training with combo: {combo}")
+
+
+        model = MLP(
+            input_size=12*1, 
+            layers=[combo['num_nodes'] for i in range(combo['num_layers'])],
+            output_size=6,
+            initializer_method='xavier',
+            activation=nn.ReLU
+        )
+        
+        if combo['optimizer'] == 'SGD':
+            optimizer = torch.optim.SGD(model.parameters(), lr=combo['learning_rate'])
+        elif combo['optimizer'] == 'RMSprop':
+            optimizer = torch.optim.RMSprop(model.parameters(), lr=combo['learning_rate'], weight_decay=1e-4)
+        else:
+            optimizer = torch.optim.Adam(model.parameters(), lr=combo['learning_rate'])
+        
+        criterion = nn.MSELoss()
+        earlystopping = EarlyStopping(patience=3)
+
+        num_epochs = combo['epochs']
+        trainer = Trainer(
+            model=model,
+            learning_rate=combo['learning_rate'],
+            criterion=criterion,
+            early_stopping=earlystopping,
+            optimizer=optimizer,
+            epochs=combo['epochs']
+        )
+        
+        trainer.train(
+            X_train=X_train,
+            y_train=y_train,
+            n_splits=combo['num_splits']
+        )
+
+        device = next(model.parameters()).device
+        dtype = next(model.parameters()).dtype
+        X_test = X_test.to(device).to(dtype)
+
+
+        output = model.forward(X_test)
+        
+        criterion = torch.nn.MSELoss()
+        test_loss = criterion(output, y_test.to(device).to(dtype)).item()
+
+        # save result immediately
+        results_df.loc[len(results_df)] = {**combo, "test_loss": test_loss}
+        results_df.to_csv(results_path, index=False)
+
+        if test_loss < best_val_loss:
+            best_val_loss = test_loss
+            best_params = combo
+            best_model_state = model.state_dict()
+
+    print(f"Best combo: {best_params} with val loss: {best_val_loss:.4f}")
+    torch.save(best_model_state, "best_lstm_model.pt")
+    print("Best model saved to best_lstm_model.pt")
 
 
 def main():
@@ -141,17 +238,24 @@ def main():
         MinMaxScaler(feature_range=(0, 1))
         )
 
+    lag = 10
     train_data, test_data, scaler = normalize_data(train_data, test_data)
     # splits = cross_validation_split(train_data, train_data, n_splits=5)
 
-    model = MLP(input_size=12*1, layers=[256 for i in range(3)], output_size=6, initializer_method='xavier', activation=nn.ReLU)
+    model = MLP(input_size=12*1, layers=[256 for i in range(10)], output_size=6, initializer_method='xavier', activation=nn.ReLU)
     earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
-    trainer = Trainer(model, learning_rate=0.0001, early_stopping=earlystopping)
+    trainer = Trainer(model, learning_rate=0.0001, early_stopping=earlystopping, epochs=100)
 
-    X_train, y_train = generate_xy(train_data, lag=10, history=1)
-    X_test, y_test = generate_xy(test_data, lag=10, history=1)
-    trainer.train(X_train, y_train, epochs=100)
+    X_train, y_train = generate_xy(train_data, lag=lag, history=1)
+    X_test, y_test = generate_xy(test_data, lag=lag, history=1)
+    # trainer.train(X_train, y_train)
 
+    grid_search(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test
+    )
 
     device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
@@ -173,7 +277,7 @@ def main():
     true = scaler.inverse_transform(y_test)
     plot_trajectories(true[:5000], output[:5000])
 
-    generated = X_test[:10]
+    generated = X_test[:lag]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
     y_pred = scaler.inverse_transform(y_pred)
     plot_trajectories(true[:5000], y_pred[:5000])
