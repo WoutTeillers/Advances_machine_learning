@@ -56,7 +56,7 @@ class EarlyStopping:
 
 
 class Trainer:
-    def __init__(self, model, learning_rate=0.001, early_stopping=None, optimizer=None, criterion=torch.nn.MSELoss()):
+    def __init__(self, model, learning_rate=0.001, early_stopping=None, optimizer=None, criterion=torch.nn.MSELoss(), epochs=100):
         self.model = model
         self.learning_rate = learning_rate
         self.early_stopping = early_stopping
@@ -64,9 +64,10 @@ class Trainer:
         self.val_losses = []
         self.optimizer = optimizer if optimizer else optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-6)
         self.criterion = criterion
+        self.epochs = epochs
         
     
-    def train(self, X_train, y_train, epochs=100, n_splits=5):
+    def train(self, X_train, y_train, n_splits=5):
         device = next(self.model.parameters()).device
         dtype = next(self.model.parameters()).dtype
         trainX = X_train.to(device).to(dtype)
@@ -76,7 +77,7 @@ class Trainer:
         tscv = TimeSeriesSplit(n_splits=n_splits)
 
         for fold, (train_idx, test_idx) in enumerate(tscv.split(np.arange(n_samples))):
-            print(f"fold {fold + 1}")
+            # print(f"fold {fold + 1}")
             self.early_stopping.reset()
 
 
@@ -91,7 +92,7 @@ class Trainer:
             fold_train_losses = []
             fold_val_losses = []
 
-            for epoch in range(epochs):
+            for epoch in range(self.epochs):
                 self.model.train()
                 running_loss = 0.0
                 for idx, (X_batch, y_batch) in enumerate(train_dataloader):
@@ -110,11 +111,11 @@ class Trainer:
                     val_loss = self.criterion(val_output, y_val)
                     fold_val_losses.append(val_loss.item())
                     r2 = r2_score(y_val.cpu().numpy(), val_output.cpu().numpy())
-                    print(f"Epoch {epoch+1}/{epochs}, Train Loss: {loss.item():.6f}, Val Loss: {val_loss.item():.6f}, R^2: {r2:.2f}")
+                    # print(f"Epoch {epoch+1}/{self.epochs}, Train Loss: {loss.item():.6f}, Val Loss: {val_loss.item():.6f}, R^2: {r2:.2f}")
 
                     self.early_stopping(val_loss)
                     if self.early_stopping.early_stop:
-                        print("Early stopping")
+                        # print("Early stopping")
                         break
 
             self.train_losses.extend(fold_train_losses)
