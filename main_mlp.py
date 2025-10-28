@@ -189,7 +189,6 @@ def generate_timeseries(model, steps, generated, Y_test, criterion, scaler, devi
             input_t = generated[i]
             input_t = input_t.unsqueeze(0)  # add batch dimension
             output = model(input_t)
-            print(output.shape)
             output = append_velocities(input_t.squeeze(0), output, scaler, deltat, lag)
             output = output.to(device).to(dtype)
             generated = torch.cat((generated, output), dim=0)           
@@ -369,11 +368,11 @@ def main():
 
 
     
-    generated = X_test[:10]
+    generated = X_test[:lag]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
     output = scaler.inverse_transform(y_pred)
      # change y_test back to full 12 dimensions by adding zeros for vx, vy
-    y_test_full = np.zeros((y_test.shape[0], 12))
+    y_test_full = np.zeros((output.shape[0], 12))
     y_test_full[:, :6] = y_test
     true = scaler.inverse_transform(y_test_full)
 
