@@ -47,7 +47,7 @@ def generate_xy(data, lag=10):
 
 def normalize_data(train_data, test_data, scaler=None):
     if scaler is None:
-        scaler = MinMaxScaler()
+        scaler = RobustScaler()
         scaler.fit(train_data)
     normalized_train_data = scaler.transform(train_data)
     normalized_test_data = scaler.transform(test_data)

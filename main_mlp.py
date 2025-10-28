@@ -13,13 +13,10 @@ from data.data_creation import plot_trajectories
 import torch.nn as nn
 import math
 from sklearn.metrics import r2_score
-<<<<<<< HEAD
 from src.timeseriesdataloader import TimeSeriesDataset
 from torch.utils.data import DataLoader
-=======
 from itertools import product
 import pandas as pd
->>>>>>> e23c52f84c09520ba968fce29022e2f78c894ca7
 
 
 
@@ -118,10 +115,11 @@ def append_velocities(t, t_n, scaler, deltat, lag):
     t_n_scaled[:, :6] = t_n.numpy()
     t_n_unscaled = scaler.inverse_transform(t_n_scaled)
     t_n_positions = t_n_unscaled[:, :6]
+    print(t_n_positions.shape)
 
     t_positions = t_unscaled[:, :6]
     difference = t_n_positions - t_positions
-    velocities = difference / (deltat)*lag
+    velocities = difference / (deltat*lag)
     print(velocities.shape, t_n.shape)
     t_new_vel = np.hstack((t_n_positions, velocities))
     print(t_new_vel.shape)
@@ -287,26 +285,18 @@ def main():
         model,
         learning_rate=0.0001,
         early_stopping=earlystopping,
-        epochs=100)
+        epochs=20)
 
-<<<<<<< HEAD
-    X_train, y_train = generate_xy(train_data, lag=10, history=1)
-    X_test, y_test = generate_xy(test_data, lag=10, history=1)
-
-
-    trainer.train(X_train, y_train, epochs=1)
-=======
     X_train, y_train = generate_xy(train_data, lag=lag, history=1)
     X_test, y_test = generate_xy(test_data, lag=lag, history=1)
     trainer.train(X_train, y_train)
->>>>>>> e23c52f84c09520ba968fce29022e2f78c894ca7
 
-    grid_search(
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test
-    )
+    # grid_search(
+    #     X_train=X_train,
+    #     y_train=y_train,
+    #     X_test=X_test,
+    #     y_test=y_test
+    # )
 
     # run on test data
     device = next(model.parameters()).device
@@ -321,7 +311,6 @@ def main():
     r2 = r2_score(y_test, output)
     print(f"r2 on test data = {r2}, MSE: {mse_error}")
 
-<<<<<<< HEAD
     # change output back to full 12 dimensions by adding zeros for vx, vy
     out_full = np.zeros((output.shape[0], 12))
     out_full[:, :6] = output
@@ -340,15 +329,6 @@ def main():
     
     generated = X_test[:10]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
-=======
-    output = scaler.inverse_transform(output)
-    true = scaler.inverse_transform(y_test)
-    plot_trajectories(true[:5000], output[:5000])
-
-    # generate timeseries with iterative approach
-    generated = X_test[:lag]
-    y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
->>>>>>> e23c52f84c09520ba968fce29022e2f78c894ca7
     y_pred = scaler.inverse_transform(y_pred)
     plot_trajectories(true[:5000], y_pred[:5000])
 
