@@ -127,6 +127,43 @@ def append_velocities(t, t_n, scaler, deltat, lag):
     # print(t_new_scaled.shape)
     return torch.tensor(t_new_scaled)
 
+def evaluate_predict_velocities_fd(X_train, scaler, deltat, lag, offset=None):
+    from sklearn.metrics import mean_squared_error
+    """
+    NumPy version: predicts velocity at t+offset as (pos_{t+offset} - pos_t) / (deltat*lag)
+    Compares to actual velocity at t+offset (after inverse scaling) using sklearn MSE.
+    If offset is None, uses offset = lag (recommended).
+    """
+    if offset is None:
+        offset = lag
+
+    n, dim = X_train.shape
+    assert dim == 12, "X_train must have 12 columns"
+    mse_list = []
+
+    for t in range(n - offset):
+        x_t_scaled = X_train[t].reshape(1, -1)
+        x_t_off_scaled = X_train[t + offset].reshape(1, -1)
+
+        x_t_unscaled = scaler.inverse_transform(x_t_scaled)         # shape (1,12)
+        x_t_off_unscaled = scaler.inverse_transform(x_t_off_scaled)
+
+        pos_t = x_t_unscaled[0, :6]
+        pos_t_off = x_t_off_unscaled[0, :6]
+
+        pred_vel = (pos_t_off - pos_t) / (deltat * lag)   # (6,)
+        actual_vel = x_t_off_unscaled[0, 6:12]            # (6,)
+
+        mse = mean_squared_error(actual_vel, pred_vel)
+        mse_list.append(mse)
+
+    return {
+        "num_samples": len(mse_list),
+        "mse_list": mse_list,
+        "mean_mse": float(np.mean(mse_list)) if mse_list else float("nan"),
+        "mean_rmse": float(np.mean(np.sqrt(mse_list))) if mse_list else float("nan")
+    }
+
 
 def generate_timeseries(model, steps, generated, Y_test, criterion, scaler, device='cpu', deltat=1e-3, lag=10):
     """
@@ -290,6 +327,8 @@ def main():
 
     X_train, y_train = generate_xy(train_data, lag=10, history=1)
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
+
+    print(evaluate_predict_velocities_fd(X_test, scaler, 0.001, 10, 10)['mean_mse'])
 
     trainer.train(X_train, y_train)
 
