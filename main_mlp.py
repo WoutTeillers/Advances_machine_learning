@@ -240,15 +240,25 @@ def main():
 
     lag = 10
     train_data, test_data, scaler = normalize_data(train_data, test_data)
-    # splits = cross_validation_split(train_data, train_data, n_splits=5)
 
-    model = MLP(input_size=12*1, layers=[256 for i in range(10)], output_size=6, initializer_method='xavier', activation=nn.ReLU)
+    model = MLP(
+        input_size=12*1,
+        layers=[256 for i in range(10)],
+        output_size=6,
+        initializer_method='xavier',
+        activation=nn.ReLU
+    )
+
     earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
-    trainer = Trainer(model, learning_rate=0.0001, early_stopping=earlystopping, epochs=100)
+    trainer = Trainer(
+        model,
+        learning_rate=0.0001,
+        early_stopping=earlystopping,
+        epochs=100)
 
     X_train, y_train = generate_xy(train_data, lag=lag, history=1)
     X_test, y_test = generate_xy(test_data, lag=lag, history=1)
-    # trainer.train(X_train, y_train)
+    trainer.train(X_train, y_train)
 
     grid_search(
         X_train=X_train,
@@ -257,11 +267,10 @@ def main():
         y_test=y_test
     )
 
+    # run on test data
     device = next(model.parameters()).device
     dtype = next(model.parameters()).dtype
     X_test = X_test.to(device).to(dtype)
-
-
     output = model.forward(X_test)
     
     criterion = torch.nn.MSELoss()
@@ -269,14 +278,13 @@ def main():
     output = output.detach().numpy()
 
     r2 = r2_score(y_test, output)
-    
     print(f"r2 on test data = {r2}, MSE: {mse_error}")
-
 
     output = scaler.inverse_transform(output)
     true = scaler.inverse_transform(y_test)
     plot_trajectories(true[:5000], output[:5000])
 
+    # generate timeseries with iterative approach
     generated = X_test[:lag]
     y_pred = generate_timeseries(model, 5000, generated, y_test, criterion)
     y_pred = scaler.inverse_transform(y_pred)
