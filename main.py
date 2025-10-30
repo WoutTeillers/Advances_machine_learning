@@ -8,7 +8,7 @@ import pickle
 import torch
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold
-from data_creation import plot_trajectories2
+from data.data_creation import plot_trajectories
 
 def load_data():
     if not os.path.exists('data/trajectories.npy'):
@@ -78,11 +78,11 @@ def main():
     sol = load_data()
     train_data, test_data = data_preperation(sol, train_test_split=0.85)
     train_data, test_data, scaler = normalize_data(train_data, test_data)
-    X_train, y_train = generate_xy(train_data, lag=100, history=True)
-    X_test, y_test = generate_xy(test_data, lag=100, history=True)
+    X_train, y_train = generate_xy(train_data, lag=10)
+    X_test, y_test = generate_xy(test_data, lag=10)
     splits = cross_validation_split(train_data, train_data, n_splits=5)
 
-    model = LSTM(input_size=12*100, hidden_size=128, output_size=12, initializer_method='xavier')
+    model = LSTM(input_size=12*100, hidden_size=512, output_size=12, initializer_method='xavier')
     earlystopping = EarlyStopping(patience=1, verbose=True) # delta could be 1e-4/5/6/
     trainer = Trainer(model, learning_rate=0.001, early_stopping=earlystopping)
     trainer.train(X_train, y_train, X_test, y_test, epochs=100)

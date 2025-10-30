@@ -56,7 +56,7 @@ def generate_xy(data, lag=1, history=False):
     y = torch.tensor(data[lag:])
     print(y.shape)
     # change y to only the x, y positions so first 6 columns
-    y = y[:, :6]
+    # y = y[:, :6]
     return X, y
 
 
@@ -189,10 +189,10 @@ def generate_timeseries(model, steps, generated, Y_test, criterion, scaler, devi
             input_t = generated[i]
             input_t = input_t.unsqueeze(0)  # add batch dimension
             output = model(input_t)
-            output = append_velocities(input_t.squeeze(0), output, scaler, deltat, lag)
+            # output = append_velocities(input_t.s  queeze(0), output, scaler, deltat, lag)
             output = output.to(device).to(dtype)
             generated = torch.cat((generated, output), dim=0)           
-            y_val = torch.tensor(Y_test[i], dtype=torch.float32)
+            # y_val = torch.tensor(Y_test[i], dtype=torch.float32)
 
     print(generated.shape)
     return np.array(generated)
@@ -217,11 +217,11 @@ def grid_search(X_train, y_train, X_test, y_test):
     combinations = [dict(zip(keys, values)) for values in product(*param_grid.values())]
     print(f"Total combinations to try: {len(combinations)}")
 
-    results_path = "grid_search_results_mlp.csv"
+    results_path = "grid_search_results_mlp2.csv"
     if os.path.exists(results_path):
         results_df = pd.read_csv(results_path)
     else:
-        results_df = pd.DataFrame(columns=keys + ["test_loss"])
+        results_df = pd.DataFrame(columns=keys + ["test_loss", "r2"])
 
     best_val_loss = results_df["test_loss"].min() if not results_df.empty else float('inf')
     best_params = None
@@ -239,7 +239,7 @@ def grid_search(X_train, y_train, X_test, y_test):
         model = MLP(
             input_size=12*1, 
             layers=[combo['num_nodes'] for i in range(combo['num_layers'])],
-            output_size=6,
+            output_size=12,
             initializer_method='xavier',
             activation=nn.ReLU
         )
@@ -279,9 +279,11 @@ def grid_search(X_train, y_train, X_test, y_test):
         
         criterion = torch.nn.MSELoss()
         test_loss = criterion(output, y_test.to(device).to(dtype)).item()
+        r2 = r2_score(y_test, output.detach().numpy())
+        print(f"r2 on test data = {r2}, mse: {test_loss}")
 
         # save result immediately
-        results_df.loc[len(results_df)] = {**combo, "test_loss": test_loss}
+        results_df.loc[len(results_df)] = {**combo, "test_loss": test_loss, "r2": r2}
         results_df.to_csv(results_path, index=False)
 
         if test_loss < best_val_loss:
@@ -303,16 +305,14 @@ def main():
         RobustScaler(),
         MinMaxScaler(feature_range=(0, 1))
         )'''
-    
-
 
     lag = 10
     train_data, test_data, scaler = normalize_data(train_data, test_data)
 
     model = MLP(
         input_size=12*1,
-        layers=[256 for i in range(10)],
-        output_size=6,
+        layers=[64 for i in range(3)],
+        output_size=12,
         initializer_method='xavier',
         activation=nn.ReLU
     )
@@ -320,24 +320,22 @@ def main():
     earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
     trainer = Trainer(
         model,
-        learning_rate=0.0001,
+        learning_rate=0.001,
         early_stopping=earlystopping,
-        epochs=100)
+        epochs=50)
 
     X_train, y_train = generate_xy(train_data, lag=10, history=1)
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
+    # print(evaluate_predict_velocities_fd(X_test, scaler, 0.001, 10, 10)['mean_mse'])
 
-    print(evaluate_predict_velocities_fd(X_test, scaler, 0.001, 10, 10)['mean_mse'])
+    trainer.train(X_train, y_train, n_splits=10)
 
-    trainer.train(X_train, y_train)
-
-    '''
     grid_search(
         X_train=X_train,
         y_train=y_train,
         X_test=X_test,
         y_test=y_test
-    )'''
+    )
 
     # run on test data
     device = next(model.parameters()).device
@@ -353,30 +351,24 @@ def main():
     print(f"r2 on test data = {r2}, MSE: {mse_error}")
 
     # change output back to full 12 dimensions by adding zeros for vx, vy
-    out_full = np.zeros((output.shape[0], 12))
-    out_full[:, :6] = output
-    output = scaler.inverse_transform(out_full)
+    # out_full = np.zeros((output.shape[0], 12))
+    # out_full[:, :6] = output
+    output = scaler.inverse_transform(output)
 
     
     # change y_test back to full 12 dimensions by adding zeros for vx, vy
-    y_test_full = np.zeros((y_test.shape[0], 12))
-    y_test_full[:, :6] = y_test
-    true = scaler.inverse_transform(y_test_full)
+    # y_test_full = np.zeros((y_test.shape[0], 12))
+    # y_test_full[:, :6] = y_test
+    true = scaler.inverse_transform(y_test)
 
-    plot_trajectories(true[:5000], output[:5000])
+    plot_trajectories(true, output)
 
-
-
-    
     generated = X_test[:lag]
-    y_pred = generate_timeseries(model, 5000, generated, y_test, criterion, scaler)
+    generated = generated[::10]
+    y_pred = generate_timeseries(model, 2000, generated, y_test, criterion, scaler)
     output = scaler.inverse_transform(y_pred)
-     # change y_test back to full 12 dimensions by adding zeros for vx, vy
-    y_test_full = np.zeros((output.shape[0], 12))
-    y_test_full[:, :6] = y_test
-    true = scaler.inverse_transform(y_test_full)
 
-    plot_trajectories(true[:5000], output[:5000])
+    plot_trajectories(true[:2000], output[:2000])
 
 
 

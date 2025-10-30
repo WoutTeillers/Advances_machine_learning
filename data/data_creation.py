@@ -62,8 +62,8 @@ def get_trajectories():
     ])
     # I took these randomly but these initial conditions resulted in a nice plot.
 
-    eval_time = 10
-    steps = 10000
+    eval_time = 100
+    steps = 1000*eval_time
     t_span = (0, eval_time)
     t_eval = np.linspace(0, eval_time, steps)
 
@@ -105,7 +105,7 @@ def plot_trajectories(x, x_pred=None, num_bodies=3):
         plt.plot(x[:, i], x[:, i+3], label=f"True Body {i+1}", linestyle='-')
         plt.plot(x_pred[:, i], x_pred[:, i+3], label=f"Pred Body {i+1}", linestyle='--')
         plt.scatter(x[0, i], x[0, i+3], color='blue', marker='o', s=50, edgecolor='black')
-        plt.scatter(x_pred[0, i], x_pred[0, i+3], color='orange', marker='x', s=15, edgecolor='black')
+        plt.scatter(x_pred[0, i], x_pred[0, i+3], color='orange', marker='x', s=15)
         
     plt.xlabel("x")
     plt.ylabel("y")

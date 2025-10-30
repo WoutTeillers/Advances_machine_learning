@@ -163,18 +163,18 @@ def main():
     plot_trajectories(scaler.inverse_transform(y_test), scaler.inverse_transform(test_preds))
 
     np.save(
-        file="y_test.npz",
+        file="y_test",
         arr=scaler.inverse_transform(y_test)
     )
 
     print(np.array(test_preds).shape)
     np.save(
-        file="pred.npz",
+        file="pred",
         arr=scaler.inverse_transform(np.array(test_preds))
     )
 
     np.save(
-        file='pred_loop.npz',
+        file='pred_loop',
         arr=scaler.inverse_transform(output)
     )
 

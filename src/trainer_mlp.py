@@ -96,7 +96,7 @@ class Trainer:
                 self.model.train()
                 running_loss = 0.0
                 for idx, (X_batch, y_batch) in enumerate(train_dataloader):
-                    print(f'batch: {idx+1}/{len(train_dataloader)}')
+                    # print(f'batch: {idx+1}/{len(train_dataloader)}')
                     self.optimizer.zero_grad()
                     output = self.model(X_batch)
                     loss = self.criterion(output, y_batch)
@@ -111,11 +111,11 @@ class Trainer:
                     val_loss = self.criterion(val_output, y_val)
                     fold_val_losses.append(val_loss.item())
                     r2 = r2_score(y_val.cpu().numpy(), val_output.cpu().numpy())
-                    print(f"Epoch {epoch+1}/{self.epochs}, Train Loss: {loss.item():.6f}, Val Loss: {val_loss.item():.6f}, R^2: {r2:.2f}")
+                    # print(f"Epoch {epoch+1}/{self.epochs}, Train Loss: {loss.item():.6f}, Val Loss: {val_loss.item():.6f}, R^2: {r2:.2f}")
 
                     self.early_stopping(val_loss)
                     if self.early_stopping.early_stop:
-                        print("Early stopping")
+                        # print("Early stopping")
                         break
 
             self.train_losses.extend(fold_train_losses)
