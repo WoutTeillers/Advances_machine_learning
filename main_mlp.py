@@ -318,7 +318,7 @@ def main():
         activation=nn.ReLU
     )
 
-    earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
+    earlystopping = EarlyStopping(patience=0) # delta could be 1e-4/5/6/
     trainer = Trainer(
         model,
         learning_rate=0.0001,
@@ -329,15 +329,15 @@ def main():
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
     # print(evaluate_predict_velocities_fd(X_test, scaler, 0.001, 10, 10)['mean_mse'])
 
-    trainer.train(X_train, y_train, n_splits=10)
+    trainer.train(X_train, y_train, n_splits=5)
     trainer.plot_losses()
 
-    grid_search(
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test
-    )
+    # grid_search(
+    #     X_train=X_train,
+    #     y_train=y_train,
+    #     X_test=X_test,
+    #     y_test=y_test
+    # )
 
     # run on test data
     device = next(model.parameters()).device

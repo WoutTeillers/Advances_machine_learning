@@ -103,7 +103,7 @@ class Trainer:
                     loss.backward()
                     self.optimizer.step()
                     running_loss += loss.item()
-                fold_train_losses.append(loss.item())
+                fold_train_losses.append(running_loss / len(train_dataloader))
 
                 self.model.eval()
                 with torch.no_grad():
@@ -123,11 +123,28 @@ class Trainer:
                 
             
     def plot_losses(self):
-        loss = [np.mean(x) for x in self.train_losses]
-        valloss = [np.mean(x) for x in self.val_losses]
+        print(len(self.train_losses))
+        losses = self.train_losses
+        val_losses = self.val_losses
 
-        plt.plot(loss, label='Training Loss')
-        plt.plot(valloss, label='Validation Loss')
+        max_epochs = 100
+        padded_losses = np.full((len(losses), max_epochs), np.nan)  # shape: (num_folds, max_epochs)
+
+        for i, f in enumerate(losses):
+            padded_losses[i, :len(f)] = f
+        avg_loss_per_epoch = np.nanmean(padded_losses, axis=0)
+
+        padded_val_losses = np.full((len(val_losses), max_epochs), np.nan)  # shape: (num_folds, max_epochs)
+
+        for i, f in enumerate(val_losses):
+            padded_val_losses[i, :len(f)] = f
+        avg_loss_per_epoch = np.nanmean(padded_losses, axis=0)
+        avg_val_loss_per_epoch = np.nanmean(padded_val_losses, axis=0)
+        
+
+
+        plt.plot(avg_loss_per_epoch, label='Training Loss')
+        plt.plot(avg_val_loss_per_epoch, label='Validation Loss')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.legend()
