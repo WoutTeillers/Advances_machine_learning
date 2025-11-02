@@ -154,7 +154,7 @@ def main():
     print('generating timeseries')
     steps = 5000
 
-    generated = X_test[:19]  # TODO make this dynamical based of sliding window size
+    generated = X_test[:19]  
     generated = generated[:, -1, :]
 
     output = model.generate_timeseries(steps=steps, generated=generated, Y_test=y_test[20:], criterion=criterion, sliding_window_size=lag)
@@ -162,21 +162,6 @@ def main():
     plot_trajectories(scaler.inverse_transform(y_test[0:steps]), scaler.inverse_transform(output))
     plot_trajectories(scaler.inverse_transform(y_test), scaler.inverse_transform(test_preds))
 
-    np.save(
-        file="y_test",
-        arr=scaler.inverse_transform(y_test)
-    )
-
-    print(np.array(test_preds).shape)
-    np.save(
-        file="pred",
-        arr=scaler.inverse_transform(np.array(test_preds))
-    )
-
-    np.save(
-        file='pred_loop',
-        arr=scaler.inverse_transform(output)
-    )
 
     save_message = save_model(model)
     print(save_message)

@@ -62,7 +62,7 @@ class Trainer:
         self.early_stopping = early_stopping
         self.train_losses = []
         self.val_losses = []
-        self.optimizer = optimizer if optimizer else optim.AdamW(model.parameters(), lr=learning_rate)
+        self.optimizer = optimizer if optimizer else optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-6)
         self.criterion = criterion
         self.epochs = epochs
         
@@ -96,7 +96,7 @@ class Trainer:
                 self.model.train()
                 running_loss = 0.0
                 for idx, (X_batch, y_batch) in enumerate(train_dataloader):
-                    # print(f'batch: {idx+1}/{len(train_dataloader)}')
+                    #print(f'batch: {idx+1}/{len(train_dataloader)}')
                     self.optimizer.zero_grad()
                     output = self.model(X_batch)
                     loss = self.criterion(output, y_batch)
