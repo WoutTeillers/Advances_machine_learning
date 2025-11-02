@@ -41,13 +41,17 @@ pip install -r requirements.txt
 ## 4. Run Application
 
 - Stateless LSTM
+Make sure lag=1 in main_stateless.py at line 120
 
 ```
 python main_stateless.py
 ```
 - LSTM with forecast horizon
+Make sure lag > 1 in main_stateless.py at line 120
 
-
+```
+python main_stateless.py
+```
 - Stateful LSTM
 
 ```
