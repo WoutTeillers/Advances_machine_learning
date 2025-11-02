@@ -150,3 +150,4 @@ class Trainer:
         plt.legend()
         plt.title('Training and Validation Loss over Epochs')
         plt.show()
+

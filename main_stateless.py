@@ -12,6 +12,7 @@ import time
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import r2_score
+import sys
 
 
 def load_data():
@@ -117,7 +118,8 @@ def validate_test_data(model, X_test, y_test, criterion):
 
 def main():
     sol = load_data()
-    lag = 10
+    lag = sys.argv[1]
+    lag = int(lag)
     train_data, test_data = data_preperation(sol, train_test_split=0.85)
     train_data, test_data, scaler = normalize_data(train_data, test_data)
 
@@ -154,7 +156,7 @@ def main():
     print('generating timeseries')
     steps = 5000
 
-    generated = X_test[:19]  
+    generated = X_test[:2*lag-1]  
     generated = generated[:, -1, :]
 
     output = model.generate_timeseries(steps=steps, generated=generated, Y_test=y_test[20:], criterion=criterion, sliding_window_size=lag)
