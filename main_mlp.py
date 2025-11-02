@@ -203,12 +203,12 @@ def grid_search(X_train, y_train, X_test, y_test):
 
     # define the grid search parameters
     param_grid = {
-        'num_layers': [3, 5, 10, 12],
+        'num_layers': [3, 5, 10],
         'num_nodes': [64, 256, 512],
         'learning_rate': [1e-2, 1e-3, 1e-4, 1e-5],
-        'epochs': [50, 100, 500],
+        'epochs': [100],
         'optimizer': ['SGD', 'RMSprop', "ADAM"],
-        'num_splits': [5, 10]
+        'num_splits': [5]
     }
 
 
@@ -227,7 +227,8 @@ def grid_search(X_train, y_train, X_test, y_test):
     best_params = None
     best_model_state = None
 
-    for combo in combinations:
+    for i, combo in enumerate(combinations):
+        print(f'{i}/{len(combinations)}')
         mask = (results_df[list(combo.keys())] == pd.Series(combo)).all(axis=1)
         if mask.any():
             print(f"Skipping already completed combo: {combo}")
@@ -311,7 +312,7 @@ def main():
 
     model = MLP(
         input_size=12*1,
-        layers=[64 for i in range(3)],
+        layers=[512 for i in range(3)],
         output_size=12,
         initializer_method='xavier',
         activation=nn.ReLU
@@ -320,15 +321,16 @@ def main():
     earlystopping = EarlyStopping(patience=3) # delta could be 1e-4/5/6/
     trainer = Trainer(
         model,
-        learning_rate=0.001,
+        learning_rate=0.0001,
         early_stopping=earlystopping,
-        epochs=50)
+        epochs=100)
 
     X_train, y_train = generate_xy(train_data, lag=10, history=1)
     X_test, y_test = generate_xy(test_data, lag=10, history=1)
     # print(evaluate_predict_velocities_fd(X_test, scaler, 0.001, 10, 10)['mean_mse'])
 
     trainer.train(X_train, y_train, n_splits=10)
+    trainer.plot_losses()
 
     grid_search(
         X_train=X_train,
@@ -368,7 +370,7 @@ def main():
     y_pred = generate_timeseries(model, 2000, generated, y_test, criterion, scaler)
     output = scaler.inverse_transform(y_pred)
 
-    plot_trajectories(true[:2000], output[:2000])
+    plot_trajectories(true[:5000], output[:5000])
 
 
 

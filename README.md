@@ -3,6 +3,7 @@
 # Project Setup and Usage
 
 ## 1. Create a virtual environment
+
 ```
 python -m venv venv
 ```
@@ -12,20 +13,23 @@ python -m venv venv
 **Windows (PowerShell):**
 
 ```
-venv\Scripts\Activagte
+venv\Scripts\Activate
 ```
 
 **MacOS / Linux**
+
 ```
 source venv/bin/activate
 ```
 
 ## 3. Install Dependencies
+
 ```
 pip install -r requirements.txt
 ```
 
 ## 4. Run Application
+
 ```
 python main.py
 ```

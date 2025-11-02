@@ -62,7 +62,7 @@ class Trainer:
         self.early_stopping = early_stopping
         self.train_losses = []
         self.val_losses = []
-        self.optimizer = optimizer if optimizer else optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-6)
+        self.optimizer = optimizer if optimizer else optim.AdamW(model.parameters(), lr=learning_rate)
         self.criterion = criterion
         self.epochs = epochs
         
@@ -118,13 +118,16 @@ class Trainer:
                         # print("Early stopping")
                         break
 
-            self.train_losses.extend(fold_train_losses)
-            self.val_losses.extend(fold_val_losses)
+            self.train_losses.append(fold_train_losses)
+            self.val_losses.append(fold_val_losses)
                 
             
     def plot_losses(self):
-        plt.plot(self.train_losses, label='Training Loss')
-        plt.plot(self.val_losses, label='Validation Loss')
+        loss = [np.mean(x) for x in self.train_losses]
+        valloss = [np.mean(x) for x in self.val_losses]
+
+        plt.plot(loss, label='Training Loss')
+        plt.plot(valloss, label='Validation Loss')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.legend()
